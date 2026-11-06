@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#2b171d">
+<title>Library</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#2b171d; --panel:#3d2229; --line:#5a3a42;
+  --gold:#d4a05a; --paper:#f3e9d8; --text:#f1e6d6; --muted:#b9a496;
+  --reader:#1c0f13;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--text);
+  font-family:"Hind Siliguri",system-ui,-apple-system,"Segoe UI",sans-serif}
+body{min-height:100vh}
+button{font:inherit;color:inherit;cursor:pointer}
+
+/* ---------- Library ---------- */
+header{padding:28px 18px 8px;max-width:900px;margin:0 auto}
+h1{margin:0;font-size:30px;font-weight:700;letter-spacing:.2px;color:var(--paper)}
+.sub{margin:2px 0 0;color:var(--muted);font-size:15px}
+.rule{width:56px;height:3px;background:var(--gold);margin:14px 0 16px;border-radius:2px}
+.search{width:100%;padding:12px 14px;border-radius:12px;border:1px solid var(--line);
+  background:var(--panel);color:var(--text);font:inherit;font-size:16px;outline:none}
+.search:focus{border-color:var(--gold)}
+.search::placeholder{color:var(--muted)}
+
+main{max-width:900px;margin:0 auto;padding:14px 18px 60px}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px 14px}
+@media(min-width:620px){.grid{grid-template-columns:repeat(3,1fr)}}
+@media(min-width:820px){.grid{grid-template-columns:repeat(4,1fr)}}
+
+.card{background:none;border:0;padding:0;text-align:left;display:block;width:100%}
+.cover{position:relative;border-radius:10px;overflow:hidden;background:var(--panel);
+  aspect-ratio:9/16;border:1px solid var(--line);
+  box-shadow:0 8px 18px rgba(0,0,0,.35);transition:transform .15s}
+.card:active .cover{transform:scale(.97)}
+.cover canvas{display:block;width:100%;height:100%;object-fit:cover}
+.cover .ph{position:absolute;inset:0;display:grid;place-items:center;color:var(--muted);font-size:13px}
+.ctitle{margin:9px 2px 0;font-size:15px;font-weight:600;line-height:1.35;color:var(--paper);
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+
+.msg{padding:50px 10px;text-align:center;color:var(--muted);line-height:1.7}
+.msg b{color:var(--paper)}
+.msg code{background:var(--panel);padding:2px 7px;border-radius:6px;color:var(--gold);font-size:14px}
+
+/* ---------- Reader ---------- */
+#reader{position:fixed;inset:0;z-index:50;background:var(--reader);display:none;flex-direction:column}
+#reader.open{display:flex}
+.bar{display:flex;align-items:center;gap:6px;padding:8px 10px;background:var(--bg);
+  border-bottom:1px solid var(--line);padding-top:max(8px,env(safe-area-inset-top))}
+.bar .t{flex:1;min-width:0;font-weight:600;font-size:15px;color:var(--paper);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 4px}
+.ib{background:var(--panel);border:1px solid var(--line);border-radius:10px;
+  min-width:42px;height:42px;display:grid;place-items:center;font-size:17px;font-weight:600;text-decoration:none;color:var(--text)}
+.ib:active{border-color:var(--gold)}
+#scroller{flex:1;overflow:auto;-webkit-overflow-scrolling:touch;padding:14px 0 90px}
+#pages{margin:0 auto;display:flex;flex-direction:column;align-items:center;gap:14px}
+.pg{background:#fff;box-shadow:0 6px 20px rgba(0,0,0,.5);flex:none;position:relative}
+.pg canvas{display:block;width:100%;height:100%}
+#ind{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom));transform:translateX(-50%);
+  background:rgba(43,23,29,.92);border:1px solid var(--gold);color:var(--gold);
+  padding:6px 16px;border-radius:99px;font-size:14px;font-weight:600;pointer-events:none}
+#rmsg{position:absolute;inset:60px 0 0;display:none;place-items:center;text-align:center;padding:30px;color:var(--muted);line-height:1.7}
+</style>
+</head>
+<body>
+
+<header>
+  <h1 id="siteTitle">Library</h1>
+  <p class="sub" id="count"></p>
+  <div class="rule"></div>
+  <input class="search" id="q" type="search" placeholder="Search…" autocomplete="off">
+</header>
+<main>
+  <div class="grid" id="grid"></div>
+  <div class="msg" id="status">Loading…</div>
+</main>
+
+<section id="reader" aria-label="PDF reader">
+  <div class="bar">
+    <button class="ib" id="closeBtn" aria-label="Close">←</button>
+    <div class="t" id="rtitle"></div>
+    <button class="ib" id="zout" aria-label="Zoom out">−</button>
+    <button class="ib" id="zin" aria-label="Zoom in">+</button>
+    <a class="ib" id="dl" aria-label="Open original" target="_blank" rel="noopener">↗</a>
+  </div>
+  <div id="scroller"><div id="pages"></div></div>
+  <div id="rmsg"></div>
+  <div id="ind">–</div>
+</section>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+/* ================= SETTINGS ================= */
+const SITE_TITLE = "Library";   // site name shown on top
+const PDF_FOLDER = "pdfs";      // folder in your repo that holds the PDFs
+// Leave these empty: they're detected automatically on GitHub Pages.
+// Only fill them if you use a custom domain.
+const GH_OWNER = "";
+const GH_REPO  = "";
+/* ============================================ */
+
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+const $ = id => document.getElementById(id);
+const grid = $("grid"), statusEl = $("status");
+let files = [];   // [{file, title}]
+
+document.title = SITE_TITLE;
+$("siteTitle").textContent = SITE_TITLE;
+
+/* ---------- Titles ---------- */
+function prettyTitle(name){
+  let t = name.replace(/\.pdf$/i,"");
+  try{ t = decodeURIComponent(t); }catch(e){}
+  return t.replace(/[-_]+/g," ").replace(/\s+/g," ").trim();
+}
+const pdfUrl = f => PDF_FOLDER + "/" + encodeURIComponent(f);
+
+/* ---------- Find the PDF list ---------- */
+function detectRepo(){
+  if(GH_OWNER && GH_REPO) return {owner:GH_OWNER, repo:GH_REPO};
+  const host = location.hostname;
+  if(!host.endsWith(".github.io")) return null;
+  const owner = host.split(".")[0];
+  const seg = location.pathname.split("/").filter(Boolean)[0];
+  const repo = (seg && !/\.html?$/i.test(seg)) ? seg : host;
+  return {owner, repo};
+}
+
+async function listFromGitHub(){
+  const r = detectRepo();
+  if(!r) throw new Error("not on github pages");
+  const res = await fetch(`https://api.github.com/repos/${r.owner}/${r.repo}/contents/${PDF_FOLDER}`);
+  if(!res.ok) throw new Error("api " + res.status);
+  const items = await res.json();
+  return items.filter(i => i.type === "file" && /\.pdf$/i.test(i.name)).map(i => i.name);
+}
+
+async function listFromManifest(){
+  const res = await fetch(PDF_FOLDER + "/pdfs.json", {cache:"no-cache"});
+  if(!res.ok) throw new Error("no manifest");
+  const data = await res.json();
+  return data.map(x => typeof x === "string" ? x : x.file);
+}
+
+async function loadList(){
+  let names;
+  try{ names = await listFromGitHub(); }
+  catch(e){ names = await listFromManifest(); }
+  names.sort((a,b)=>a.localeCompare(b,"bn",{numeric:true}));
+  files = names.map(f => ({file:f, title:prettyTitle(f)}));
+}
+
+/* ---------- Library grid ---------- */
+const coverObserver = new IntersectionObserver(entries=>{
+  entries.forEach(en=>{
+    if(en.isIntersecting){
+      coverObserver.unobserve(en.target);
+      renderCover(en.target);
+    }
+  });
+},{rootMargin:"300px"});
+
+async function renderCover(box){
+  try{
+    const doc = await pdfjsLib.getDocument(pdfUrl(box.dataset.file)).promise;
+    const page = await doc.getPage(1);
+    const base = page.getViewport({scale:1});
+    const scale = 420 / base.width;
+    const vp = page.getViewport({scale});
+    const c = document.createElement("canvas");
+    c.width = vp.width; c.height = vp.height;
+    await page.render({canvasContext:c.getContext("2d"), viewport:vp}).promise;
+    box.style.aspectRatio = base.width + "/" + base.height;
+    box.querySelector(".ph")?.remove();
+    box.appendChild(c);
+    doc.destroy();
+  }catch(e){
+    const ph = box.querySelector(".ph"); if(ph) ph.textContent = "PDF";
+  }
+}
+
+function drawGrid(filter=""){
+  grid.innerHTML = "";
+  const f = filter.trim().toLowerCase();
+  const list = files.filter(x => x.title.toLowerCase().includes(f));
+  list.forEach(x=>{
+    const b = document.createElement("button");
+    b.className = "card";
+    b.innerHTML = `<div class="cover" data-file=""><div class="ph">…</div></div><div class="ctitle"></div>`;
+    b.querySelector(".cover").dataset.file = x.file;
+    b.querySelector(".ctitle").textContent = x.title;
+    b.onclick = ()=> openReader(x.file, true);
+    grid.appendChild(b);
+    coverObserver.observe(b.querySelector(".cover"));
+  });
+  if(!files.length){
+    statusEl.style.display = "block";
+    statusEl.innerHTML = `<b>No PDFs yet.</b><br>Upload PDF files into the <code>${PDF_FOLDER}</code> folder of your repo and refresh.`;
+  } else if(!list.length){
+    statusEl.style.display = "block";
+    statusEl.textContent = "Nothing matches your search.";
+  } else statusEl.style.display = "none";
+  $("count").textContent = files.length ? files.length + (files.length===1 ? " PDF" : " PDFs") : "";
+}
+$("q").addEventListener("input", e => drawGrid(e.target.value));
+
+/* ---------- Reader ---------- */
+let curDoc = null, curFile = null, zoom = 1, pageEls = [], pageSizes = [];
+let renderObs = null, token = 0;
+
+const scroller = $("scroller"), pagesEl = $("pages");
+
+function pageWidth(){
+  const avail = Math.min(window.innerWidth, 860) - 16;
+  return Math.round(avail * zoom);
+}
+
+async function openReader(file, push){
+  curFile = file;
+  const my = ++token;
+  $("rtitle").textContent = prettyTitle(file);
+  $("dl").href = pdfUrl(file);
+  $("reader").classList.add("open");
+  document.body.style.overflow = "hidden";
+  $("rmsg").style.display = "none";
+  pagesEl.innerHTML = "";
+  $("ind").textContent = "…";
+  if(push) history.pushState({r:1}, "", "#" + encodeURIComponent(file));
+
+  try{
+    if(curDoc){ curDoc.destroy(); curDoc = null; }
+    const doc = await pdfjsLib.getDocument(pdfUrl(file)).promise;
+    if(my !== token){ doc.destroy(); return; }
+    curDoc = doc;
+    pageSizes = [];
+    for(let i=1;i<=doc.numPages;i++){
+      const p = await doc.getPage(i);
+      const v = p.getViewport({scale:1});
+      pageSizes.push(v.height / v.width);
+      if(my !== token) return;
+    }
+    buildPages();
+    const last = parseInt(localStorage.getItem("last:"+file) || "1", 10);
+    if(last > 1 && last <= doc.numPages){
+      const el = pageEls[last-1];
+      scroller.scrollTop = el.offsetTop - 10;
+    } else scroller.scrollTop = 0;
+    updateIndicator();
+  }catch(e){
+    const m = $("rmsg");
+    m.style.display = "grid";
+    m.innerHTML = "Couldn't open this PDF.<br>If you just uploaded it, wait a minute for GitHub Pages to finish publishing, then try again.";
+    $("ind").textContent = "";
+  }
+}
+
+function buildPages(){
+  if(renderObs) renderObs.disconnect();
+  pagesEl.innerHTML = "";
+  pageEls = [];
+  const w = pageWidth();
+  pagesEl.style.width = w + "px";
+  renderObs = new IntersectionObserver(entries=>{
+    entries.forEach(en=>{
+      if(en.isIntersecting && !en.target.dataset.done){
+        en.target.dataset.done = "1";
+        renderPage(en.target);
+      }
+    });
+  },{root:scroller, rootMargin:"1500px 0px"});
+  pageSizes.forEach((ratio,i)=>{
+    const d = document.createElement("div");
+    d.className = "pg";
+    d.style.width = w + "px";
+    d.style.height = Math.round(w * ratio) + "px";
+    d.dataset.n = i + 1;
+    pagesEl.appendChild(d);
+    pageEls.push(d);
+    renderObs.observe(d);
+  });
+}
+
+async function renderPage(el){
+  const doc = curDoc, my = token;
+  try{
+    const p = await doc.getPage(+el.dataset.n);
+    if(my !== token) return;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+    const base = p.getViewport({scale:1});
+    const scale = (el.clientWidth / base.width) * dpr;
+    const vp = p.getViewport({scale});
+    const c = document.createElement("canvas");
+    c.width = Math.floor(vp.width); c.height = Math.floor(vp.height);
+    await p.render({canvasContext:c.getContext("2d"), viewport:vp}).promise;
+    if(my !== token) return;
+    el.appendChild(c);
+  }catch(e){}
+}
+
+function currentPage(){
+  const y = scroller.scrollTop + scroller.clientHeight * 0.35;
+  let n = 1;
+  for(let i=0;i<pageEls.length;i++){
+    if(pageEls[i].offsetTop <= y) n = i + 1; else break;
+  }
+  return n;
+}
+let saveT = null;
+function updateIndicator(){
+  if(!curDoc) return;
+  const n = currentPage();
+  $("ind").textContent = n + " / " + curDoc.numPages;
+  clearTimeout(saveT);
+  saveT = setTimeout(()=>{ try{ localStorage.setItem("last:"+curFile, n); }catch(e){} }, 400);
+}
+scroller.addEventListener("scroll", updateIndicator, {passive:true});
+
+function setZoom(z){
+  if(!curDoc) return;
+  const keep = currentPage();
+  zoom = Math.max(.6, Math.min(2.4, z));
+  buildPages();
+  scroller.scrollTop = pageEls[keep-1].offsetTop - 10;
+  updateIndicator();
+}
+$("zin").onclick  = ()=> setZoom(zoom * 1.25);
+$("zout").onclick = ()=> setZoom(zoom / 1.25);
+
+function closeReader(){
+  token++;
+  $("reader").classList.remove("open");
+  document.body.style.overflow = "";
+  if(renderObs){ renderObs.disconnect(); renderObs = null; }
+  if(curDoc){ curDoc.destroy(); curDoc = null; }
+  pagesEl.innerHTML = ""; pageEls = [];
+  zoom = 1;
+}
+$("closeBtn").onclick = ()=>{
+  if(history.state && history.state.r) history.back();
+  else { history.replaceState(null, "", location.pathname + location.search); closeReader(); }
+};
+
+window.addEventListener("popstate", ()=>{
+  const h = decodeURIComponent(location.hash.slice(1));
+  if(h) openReader(h, false); else closeReader();
+});
+
+let rsT;
+window.addEventListener("resize", ()=>{
+  clearTimeout(rsT);
+  rsT = setTimeout(()=>{ if(curDoc) setZoom(zoom); }, 250);
+});
+
+/* ---------- Start ---------- */
+(async function init(){
+  try{
+    await loadList();
+    drawGrid();
+  }catch(e){
+    statusEl.style.display = "block";
+    statusEl.innerHTML = `<b>Couldn't load the list.</b><br>Make sure the <code>${PDF_FOLDER}</code> folder exists in your repo with at least one PDF.`;
+    return;
+  }
+  const h = decodeURIComponent(location.hash.slice(1));
+  if(h) openReader(h, false);
+})();
+</script>
+</body>
+</html>
